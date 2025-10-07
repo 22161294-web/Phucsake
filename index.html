@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhucSake</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root{
+      --bg: rgba(0,0,0,0.7);
+      --text: #fff;
+      --accent: #00bfff;
+      --muted: #88a;
+    }
+    *{box-sizing:border-box}
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--text);
+      padding: 16px;
+      overflow-x: hidden;
+    }
+    .bg {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      overflow: hidden;
+    }
+    .bg video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.6);
+      pointer-events: none;
+    }
+    .card {
+      background: var(--bg);
+      border-radius: 20px;
+      padding: 20px;
+      text-align: center;
+      width: min(420px, 100%);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
+    }
+    .card img.avatar {
+      border-radius: 50%;
+      width: 110px; height: 110px;
+      object-fit: cover;
+      border: 3px solid rgba(255,255,255,.2);
+    }
+    h2{margin: 12px 0 6px}
+
+    /* ICONS */
+    .icons{
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin: 6px 0 8px;
+    }
+    .icons a{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px; height: 34px;
+      text-decoration: none;
+      color: var(--text);
+      transition: transform .15s, color .2s, opacity .2s;
+    }
+    .icons a i{ font-size: 24px; line-height: 1; }
+    .icons a img{
+      height: 28px; width: auto; display: block;
+    }
+    .icons a:hover{ color: var(--accent); transform: translateY(-2px); }
+
+    /* Player */
+    .player { display: grid; gap: 10px; margin-top: 10px; }
+
+    .progress {
+      margin: 0 auto;
+      position: relative;
+      height: 8px;
+      background: rgba(255,255,255,.15);
+      border-radius: 999px;
+      cursor: pointer;
+      width: 70%;                 /* NGẮN hơn, nằm giữa */
+      max-width: 280px;
+      min-width: 160px;
+    }
+    .progress__bar {
+      position: absolute; left:0; top:0;
+      height:100%; width:0%;
+      border-radius:999px;
+      background: linear-gradient(90deg, var(--accent), #7be0ff);
+    }
+    .time { display:flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 2px; padding: 0 14%; }
+
+    /* Hàng nút dưới: Bắt đầu | Dừng | Âm lượng (mở rộng) */
+    .bottom-controls{
+      display:flex; align-items:center; justify-content:center; gap:12px; margin-top: 6px;
+    }
+    .btn {
+      width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; user-select: none;
+      transition: transform .12s ease, background .2s ease, border-color .2s;
+      background: rgba(255,255,255,.06);
+      color:#fff;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: var(--accent); }
+    .btn i { font-size: 16px; }
+
+    .vol-inline{
+      display:flex; align-items:center; gap:8px; position: relative;
+    }
+    #volSlider{
+      width: 0px; opacity: 0; height: 8px;
+      accent-color: var(--accent);
+      transition: width .25s ease, opacity .2s ease;
+    }
+    .vol-inline.open #volSlider{
+      width: 140px; opacity: 1;
+    }
+
+    /* Playlist (1 bài) */
+    .playlist { text-align: left; margin-top: 12px; }
+    .track {
+      display:flex; align-items:center; gap:10px; padding:10px; border-radius:12px;
+      transition: background .2s, border-color .2s;
+      border:2px solid transparent; cursor:pointer;
+    }
+    .track:hover{ background: rgba(255,255,255,.06); }
+    .track.active{ border-color: var(--accent); background: rgba(0, 191, 255, .12); }
+    .track .thumb{ width:40px; height:40px; border-radius:8px; object-fit:cover; }
+    .track .meta{ flex:1; display:flex; flex-direction:column; line-height:1.15; }
+    .track .title{ font-size:14px; }
+    .track .artist{ font-size:12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <!-- Video nền -->
+  <div class="bg" aria-hidden="true">
+    <video id="bgVideo" autoplay muted loop playsinline preload="auto">
+      <source src="background.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <div class="card">
+    <img class="avatar" src="avatar.jpg" alt="avatar">
+    <h2>PhucSake</h2>
+
+    <div class="icons">
+      <a href="https://www.facebook.com/sake.phuc.1" target="_blank" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
+      <a href="https://zalo.me/84964070024" target="_blank" aria-label="Zalo"><i class="fas fa-comment-dots"></i></a>
+      <a href="https://tracker.gg/valorant/profile/riot/VAR%20ePh%C3%BAcBl1%23VAR/overview?platform=pc&playlist=competitive&season=5adc33fa-4f30-2899-f131-6fba64c5dd3a" target="_blank" aria-label="Valorant">
+        <img src="valorant.png" alt="Valorant">
+      </a>
+    </div>
+
+    <!-- Player -->
+    <div class="player">
+      <!-- Thanh tiến độ & thời gian ở TRÊN -->
+      <div class="progress" id="progress">
+        <div class="progress__bar" id="progressBar"></div>
+      </div>
+      <div class="time"><span id="cur">0:00</span><span id="dur">0:00</span></div>
+
+      <!-- Hàng nút DƯỚI: Bắt đầu | Dừng | Âm lượng -->
+      <div class="bottom-controls">
+        <button class="btn" id="playBtn" title="Bắt đầu / Tạm dừng"><i class="fa-solid fa-play"></i></button>
+        <button class="btn" id="stopBtn" title="Dừng"><i class="fa-solid fa-stop"></i></button>
+
+        <div class="vol-inline" id="volWrap">
+          <button class="btn" id="volBtn" title="Âm lượng"><i class="fa-solid fa-volume-high" id="volIcon"></i></button>
+          <input type="range" id="volSlider" min="0" max="100" value="80" title="Âm lượng">
+        </div>
+      </div>
+    </div>
+
+    <audio id="audio"></audio>
+
+    <!-- Playlist 1 bài -->
+    <div class="playlist" id="playlist">
+      <div class="track active" data-src="music1.mp3" data-title="Sparkle" data-artist="RADWIMPS">
+        <img class="thumb" src="image1.png" alt="thumb1">
+        <div class="meta"><span class="title">Sparkle</span><span class="artist">RADWIMPS</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+    const formatTime = s => {
+      if (!isFinite(s)) return '0:00';
+      const m = Math.floor(s/60);
+      const ss = Math.floor(s%60).toString().padStart(2,'0');
+      return `${m}:${ss}`;
+    };
+
+    // Video nền
+    (function initBgVideo(){
+      const v = $('#bgVideo');
+      if (!v) return;
+      v.muted = true;
+      v.setAttribute('playsinline','');
+      v.setAttribute('muted','');
+      const p = v.play();
+      if (p && typeof p.then === 'function') p.catch(() => {});
+    })();
+
+    // ===== Audio setup =====
+    const audio = $('#audio');
+    const progress = $('#progress');
+    const progressBar = $('#progressBar');
+    const curEl = $('#cur');
+    const durEl = $('#dur');
+    const tracks = $$('.track', $('#playlist'));
+
+    // Nút dưới
+    const playBtn = $('#playBtn');
+    const stopBtn = $('#stopBtn');
+    const volWrap = $('#volWrap');
+    const volBtn = $('#volBtn');
+    const volIcon = $('#volIcon');
+    const volSlider = $('#volSlider');
+
+    const playlist = tracks.map(t => ({
+      src: t.dataset.src,
+      title: t.dataset.title,
+      artist: t.dataset.artist
+    }));
+    let index = 0;
+
+    function setActive(i){ tracks.forEach((t, k) => t.classList.toggle('active', k === i)); }
+    function loadSong(i){
+      index = (i + playlist.length) % playlist.length;
+      const {src} = playlist[index];
+      audio.src = src;
+      setActive(index);
+      progressBar.style.width = '0%';
+      curEl.textContent = '0:00'; durEl.textContent = '0:00';
+    }
+    function play(){ audio.play(); playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>'; }
+    function pause(){ audio.pause(); playBtn.innerHTML = '<i class="fa-solid fa-play"></i>'; }
+    function toggle(){ audio.paused ? play() : pause(); }
+    function stop(){ audio.pause(); audio.currentTime = 0; playBtn.innerHTML = '<i class="fa-solid fa-play"></i>'; }
+
+    // Volume state
+    const savedVol = Number(localStorage.getItem('nmv_volume'));
+    audio.volume = Number.isFinite(savedVol)? savedVol : 0.8;
+    volSlider.value = Math.round(audio.volume * 100);
+
+    function updateVolIcon() {
+      if (audio.muted || audio.volume === 0) volIcon.className = 'fa-solid fa-volume-xmark';
+      else if (audio.volume < 0.5) volIcon.className = 'fa-solid fa-volume-low';
+      else volIcon.className = 'fa-solid fa-volume-high';
+    }
+    updateVolIcon();
+
+    // Controls
+    playBtn.addEventListener('click', toggle);
+    stopBtn.addEventListener('click', stop);
+
+    // Volume: mở/đóng
+    volBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      volWrap.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!volWrap.contains(e.target)) volWrap.classList.remove('open');
+    });
+    volSlider.addEventListener('input', () => {
+      const v = Math.max(0, Math.min(100, Number(volSlider.value))) / 100;
+      audio.volume = v;
+      audio.muted = v === 0;
+      localStorage.setItem('nmv_volume', String(v));
+      updateVolIcon();
+    });
+
+    // Seek
+    progress.addEventListener('click', (e) => {
+      const rect = progress.getBoundingClientRect();
+      const ratio = (e.clientX - rect.left) / rect.width;
+      audio.currentTime = ratio * (audio.duration || 0);
+    });
+
+    // Cập nhật UI theo thời gian
+    audio.addEventListener('timeupdate', () => {
+      const {currentTime, duration} = audio;
+      progressBar.style.width = `${(currentTime / (duration || 1)) * 100}%`;
+      curEl.textContent = formatTime(currentTime);
+      durEl.textContent = formatTime(duration);
+    });
+    audio.addEventListener('loadedmetadata', () => {
+      durEl.textContent = formatTime(audio.duration);
+    });
+    audio.addEventListener('ended', () => { stop(); });
+
+    // Khởi tạo & tự phát khi vào trang
+    loadSong(0);
+    (async () => {
+      try {
+        await audio.play();              // cố gắng autoplay có tiếng
+        playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      } catch (e) {
+        // Nếu bị chặn, phát ở chế độ mute để vẫn chạy
+        audio.muted = true;
+        try {
+          await audio.play();
+          playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+          // khi người dùng mở volume -> tự bỏ mute
+          volSlider.addEventListener('input', () => { audio.muted = false; }, { once:true });
+          volBtn.addEventListener('click', () => { audio.muted = false; }, { once:true });
+        } catch {}
+      }
+    })();
+  </script>
+</body>
+</html>
